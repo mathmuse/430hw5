@@ -85,6 +85,7 @@ and
  | printExpression (EXP_UNARY n) = printUnary n
  | printExpression (EXP_COND n) = printCond n
  | printExpression (EXP_ASSIGN {lft=lft, rht=rht}) = printAssign lft rht
+ | printExpression (EXP_ID n) = n
 
 and printAssign lft rht = 
    (printExpression lft) ^ " = " ^ (printExpression rht)
