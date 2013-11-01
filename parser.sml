@@ -277,7 +277,7 @@ and parsePrintStatement fstr tk =
    let val (tk1, ast1) = parseExpression fstr (nextToken fstr) in
       if tk1 = TK_SEMI
       then (nextToken fstr, ST_PRINT ast1)
-      else error ";" tk1
+      else exp ";" tk1
    end
 
 and parseIterationStatement fstr tk = 
