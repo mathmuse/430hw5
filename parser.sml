@@ -235,12 +235,15 @@ and parseStatement fstr tk =
    else
       error "bad statement"
 
-and parseBlockStatement fstr tk = 
-   let val (tk1, ast1) = parseMultipleStatements fstr (nextToken fstr) in
-      if tk1 = TK_RBRACE
-      then (nextToken fstr, ST_BLOCK ast1)
-      else error "unterminated blockstatement"
-   end
+and parseBlockStatement fstr tk =
+   if tk = TK_LBRACE
+   then
+      let val (tk1, ast1) = parseMultipleStatements fstr (nextToken fstr) in
+         if tk1 = TK_RBRACE
+         then (nextToken fstr, ST_BLOCK ast1)
+         else exp "}" tk1 
+      end
+   else exp "{" tk
 
 and parseMultipleStatements fstr tk = 
    if isStatement tk
@@ -265,29 +268,31 @@ and parseIfStatement fstr tk =
                end
             else (tk3, ST_IF {iff=ast2, thn=ast3})
          end
-         else error "no closing paren in if"
+         else exp ")" tk2 
       end
-      else error "no opening paren in if"
+      else exp "(" tk1
    end
 
 and parsePrintStatement fstr tk = 
    let val (tk1, ast1) = parseExpression fstr (nextToken fstr) in
       if tk1 = TK_SEMI
       then (nextToken fstr, ST_PRINT ast1)
-      else error "no semicolon at end of print"
+      else error ";" tk1
    end
 
 and parseIterationStatement fstr tk = 
-   if (nextToken fstr) = TK_LPAREN
-   then let val (tk1, ast1) = parseExpression fstr (nextToken fstr) in
-      if tk1 = TK_RPAREN
-      then 
-         let val (tk2, ast2) = parseBlockStatement fstr (nextToken fstr) in
-            (tk2, ST_ITER {whil=ast1, block=ast2 })
-         end
-      else error "expected ) in if"
+   let val tk0 = nextToken fstr in
+      if tk0 = TK_LPAREN 
+      then let val (tk1, ast1) = parseExpression fstr (nextToken fstr) in
+         if tk1 = TK_RPAREN
+         then 
+            let val (tk2, ast2) = parseBlockStatement fstr (nextToken fstr) in
+               (tk2, ST_ITER {whil=ast1, block=ast2 })
+            end
+         else exp ")" tk1
+      end
+      else exp "(" tk0
    end
-   else error "expected ( in if"
 
 and parseExpressionStatement fstr tk = 
    let val (tk1, ast1) = parseExpression fstr tk
