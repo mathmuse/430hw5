@@ -88,7 +88,7 @@ and
  | printExpression (EXP_ID n) = n
 
 and printAssign lft rht = 
-   (printExpression lft) ^ " = " ^ (printExpression rht)
+   "(" ^ (printExpression lft) ^ " = " ^ (printExpression rht) ^ ")"
 
 and printBlock ls =
    "{" ^ (foldr (op ^) "" (map printSourceElement ls)) ^ "}"
