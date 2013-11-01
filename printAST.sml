@@ -103,7 +103,7 @@ and printEmptyIf iff thn =
    (printIf iff thn) ^ "\nelse\n{\n}"
 
 and printIfElse iff thn el =
-   (printIf iff thn) ^ "\nelse\n" ^ (printStatement el) ^ "\n"
+   (printIf iff thn) ^ "\nelse\n" ^ (printStatement el)
 
 and printPrint expr = 
    "print " ^ (printExpression expr)
