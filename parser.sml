@@ -236,8 +236,8 @@ and parseStatement fstr tk =
       error "bad statement"
 
 and parseBlockStatement fstr tk = 
-   let val (tk1, ast1) = parseMultipleStatements fstr tk in
-      if tk1 = TK_SEMI
+   let val (tk1, ast1) = parseMultipleStatements fstr (nextToken fstr) in
+      if tk1 = TK_RBRACE
       then (nextToken fstr, ST_BLOCK ast1)
       else error "unterminated blockstatement"
    end
@@ -246,7 +246,7 @@ and parseMultipleStatements fstr tk =
    if isStatement tk
    then 
       let val (tk1, ast1) = parseStatement fstr tk in
-         let val (tk2, ast2li) = parseMultipleStatements fstr tk in
+         let val (tk2, ast2li) = parseMultipleStatements fstr tk1 in
             (tk2, ast1 :: ast2li)
          end
       end
