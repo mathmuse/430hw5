@@ -65,56 +65,65 @@ and
       String.concatWith "\n" (map printSourceElement n)
 
 and printSourceElement (STMT {stmt=stmt}) = 
-   printStatement stmt
-
-and printStatement (ST_EXP {exp=exp}) = 
-   (printExpression exp 0) ^ ";"
+   (printStatement stmt) ^ ";"
 
 and 
-   printExpression (EXP_NUM n) _ = Int.toString n
- | printExpression (EXP_STRING n) _ = "\"" ^ n ^ "\""
- | printExpression EXP_TRUE _ = "true"
- | printExpression EXP_FALSE _ = "false"
- | printExpression EXP_UNDEFINED _ = "undefined"
- | printExpression (EXP_BINARY n) prevPrec = printBinary n prevPrec
- | printExpression (EXP_UNARY n) prevPrec = printUnary n prevPrec
- | printExpression (EXP_COND n) prevPrec = printCond n prevPrec 
+   printStatement (ST_EXP {exp=exp}) = printExpression exp
+ | printStatement (ST_BLOCK ls) = printBlock ls
+ | printStatement (ST_IF {iff=iff, thn=thn}) = printIf iff thn
+ | printStatement (ST_IFELSE {iff=iff, thn=thn, el}) = printIfElse iff thn el 
+ | printStatement (ST_PRINT expr) = printPrint expr
+ | printStatement (ST_ITER {whil=whil, block=block}) = printIter whil block
 
-and printBinary {opr=opr, lft=lft, rht=rht} prevPrec =
+and 
+   printExpression (EXP_NUM n) = Int.toString n
+ | printExpression (EXP_STRING n) = "\"" ^ n ^ "\""
+ | printExpression EXP_TRUE = "true"
+ | printExpression EXP_FALSE = "false"
+ | printExpression EXP_UNDEFINED = "undefined"
+ | printExpression (EXP_BINARY n) = printBinary n
+ | printExpression (EXP_UNARY n) = printUnary n
+ | printExpression (EXP_COND n) = printCond n
+ | printExpression (EXP_ASSIGN {lft=lft, rht=rht}) = printAssign lft rht
+
+and printAssign lft rht = 
+   (printExpression lft) ^ " = " ^ (printExpression rht)
+
+and printBlock ls =
+   "{" ^ (foldr (op ^) "" (map printSourceElement ls)) ^ "}"
+
+and printIf iff thn = 
+   "if " ^ (printExpression iff) ^ " then " ^ (printStatement thn)
+
+and printIfElse iff thn el = 
+   (printIf iff thn) ^ " else " ^ (printStatement el)
+
+and printPrint expr = 
+   "print " ^ (printExpression expr)
+
+and printIter whil block =
+   "while " ^ (printExpression whil) ^ " " ^ (printStatement block)
+
+and printBinary {opr=opr, lft=lft, rht=rht} =
    let 
-      val prec = binPrec opr
-      val ret =  (printExpression lft prec) ^ (binOpToStr opr) 
-         ^ (printExpression rht prec)
+      val ret =  (printExpression lft) ^ (binOpToStr opr) 
+         ^ (printExpression rht)
    in
-      (*if prec < prevPrec
-      then*)
-         "(" ^ ret ^ ")"
-      (*else      
-         ret*)
+      "(" ^ ret ^ ")"
    end
 
-and printUnary {opr=opr, opnd=opnd} prevPrec = 
+and printUnary {opr=opr, opnd=opnd} = 
    let 
-      val prec = unPrec opr 
-      val ret = (unOpToStr opr) ^ (printExpression opnd prec)
+      val ret = (unOpToStr opr) ^ (printExpression opnd)
    in
-      (*if prec < prevPrec
-      then*)
-         "(" ^ ret ^ ")"
-      (*else
-         ret*)
+      "(" ^ ret ^ ")"
    end
 
-and printCond {guard=guard, thenExp=thenExp, elseExp=elseExp} prevPrec = 
+and printCond {guard=guard, thenExp=thenExp, elseExp=elseExp} = 
    let 
-      val prec = condPrec
-      val ret = (printExpression guard prec) ^  " ? " ^ (printExpression thenExp prec) 
-         ^ " : " ^ (printExpression elseExp prec) 
+      val ret = (printExpression guard) ^  " ? " ^ (printExpression thenExp) 
+         ^ " : " ^ (printExpression elseExp) 
    in
-      (*if prec < prevPrec
-      then*)
-         "(" ^ ret ^ ")"
-      (*else
-         ret*)
+      "(" ^ ret ^ ")"
    end
 ;
