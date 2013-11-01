@@ -195,7 +195,7 @@ fun parse fname =
    end
 
 and parseProgram fstr tk = 
-   if isExpression tk
+   if isStatement tk
    then 
       let
          val (tk1, ast) = parseSourceElement fstr tk
