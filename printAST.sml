@@ -62,7 +62,7 @@ fun printAST (PROGRAM {elems=el}) =
 
 and 
    printProgram n = 
-      String.concatWith "\n" (map printSourceElement n)
+      String.concatWith "\n" (List.map printSourceElement n)
 
 and printSourceElement (STMT {stmt=stmt}) = 
    printStatement stmt
@@ -94,7 +94,7 @@ and appendln (x,y) =
    x ^ "\n" ^ y
 
 and printBlock ls =
-   "{\n" ^ (foldr appendln "" (map printSourceElement ls)) ^ "}"
+   "{\n" ^ (foldr appendln "" (List.map printSourceElement ls)) ^ "}"
 
 and printIf iff thn = 
    "if (" ^ (printExpression iff) ^ ")\n" ^ (printStatement thn)

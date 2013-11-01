@@ -1,5 +1,12 @@
 use "printAST.sml";
 
+open HashTable;
+
+val hashFn = HashString.hashString;
+val cmpFn = (op =);
+exception MissingId;
+val initSize = 20;
+
 fun 
    getBinString BOP_PLUS = "+"
  | getBinString BOP_MINUS = "-"
@@ -174,70 +181,84 @@ fun interpret fname =
    end
 
 and intProgram (PROGRAM {elems=elems}) = 
-   map intSourceElement elems
-
-and intSourceElement (STMT {stmt=stmt}) = 
-   intStatement stmt
-
-and 
-   intStatement (ST_EXP {exp=exp}) = 
-      (intExpression exp; ())
- | intStatement (ST_PRINT exp) = 
-      intPrint exp
+   let
+      val st : (string, expression) hash_table = mkTable (hashFn, cmpFn) (initSize, MissingId);
+   in
+      intSubProgram elems st
+   end
 
 and 
-   intPrint exp = print (printExpr (intExpression exp))
+   intSubProgram (h::t) st = intSubProgram t (intSourceElement h st)
+ | intSubProgram [] st = st
+
+and intSourceElement (STMT {stmt=stmt}) st= 
+   intStatement stmt st
 
 and 
-   intExpression (EXP_BINARY n) = intBinary (EXP_BINARY n)
- | intExpression (EXP_UNARY n) = intUnary (EXP_UNARY n)
- | intExpression (EXP_COND n) = intCond (EXP_COND n)
- | intExpression n = n
+   intStatement (ST_EXP {exp=exp}) st =
+      let val (v, st1) = intExpression exp st
+      in
+         st1     
+      end 
+ | intStatement (ST_PRINT exp) st = 
+      intPrint exp st
 
+and 
+   intPrint exp st =
+      let val (v, newSt) = intExpression exp st
+      in
+         (print (printExpr v); newSt)
+      end
 
-and intBinary (EXP_BINARY {opr=opr, lft=lft, rht=rht}) = 
+and 
+   intExpression (EXP_BINARY n) st = intBinary (EXP_BINARY n) st
+ | intExpression (EXP_UNARY n) st = intUnary (EXP_UNARY n) st
+ | intExpression (EXP_COND n) st = intCond (EXP_COND n) st
+ | intExpression n st = (n, st)
+
+and intBinary (EXP_BINARY {opr=opr, lft=lft, rht=rht}) st = 
    let 
-      val left = intExpression lft
+      val (left, st1) = intExpression lft st
       fun handlePlus () =
-         let val right = intExpression rht in
+         let val (right, st2) = intExpression rht st1 in
             if binStringCheck left right
-            then doStringBinary opr left right
+            then (doStringBinary opr left right, st2)
             else if binNumCheck left right
-            then doNumBinary opr left right
+            then (doNumBinary opr left right, st2)
             else typeError "+" "number * number or string * string"
                ((getType left) ^ " * " ^ (getType right))
 
          end
       fun handleNum () = 
-         let val right = intExpression rht in
+         let val (right, st2) = intExpression rht st1 in
             if binNumCheck left right
-            then doNumBinary opr left right
+            then (doNumBinary opr left right, st2)
             else typeError (getBinString opr) "number * number"
                ((getType left) ^ " * " ^ (getType right))
          end
       fun handleRel () =
-         let val right = intExpression rht in
+         let val (right, st2) = intExpression rht st1 in
             if binNumCheck left right
-            then doRelBinary opr left right
+            then (doRelBinary opr left right, st2)
             else typeError (getBinString opr) "number * number"
                ((getType left) ^ " * " ^ (getType right))
          end
       fun handleEq () = 
-         let val right = intExpression rht in 
+         let val (right, st2) = intExpression rht st1 in 
             if binSameCheck left right
-            then doEqBinary opr left right
+            then (doEqBinary opr left right, st2)
             else case opr of
-               BOP_EQ => EXP_FALSE
-             | BOP_NE => EXP_TRUE
+               BOP_EQ => (EXP_FALSE, st2)
+             | BOP_NE => (EXP_TRUE, st2)
          end
       fun handleOr () = 
          if unBoolCheck left
          then case left of
-            EXP_TRUE => EXP_TRUE
+            EXP_TRUE => (EXP_TRUE, st1)
           | EXP_FALSE => 
-               let val right = intExpression rht in
+               let val (right, st2) = intExpression rht st1 in
                   if unBoolCheck right
-                  then right
+                  then (right, st2)
                   else typeError "||" "boolean * boolean" 
                      ((getType left) ^ " * " ^ (getType right))
                end
@@ -246,16 +267,19 @@ and intBinary (EXP_BINARY {opr=opr, lft=lft, rht=rht}) =
          if unBoolCheck left
          then case left of
             EXP_TRUE => 
-               let val right = intExpression rht in 
+               let val (right, st2) = intExpression rht st1 in 
                   if unBoolCheck right
-                  then right
+                  then (right, st2)
                   else typeError "&&" "boolean * boolean" 
                      ((getType left) ^ " * " ^ (getType right))
                end
-          | EXP_FALSE => EXP_FALSE
+          | EXP_FALSE => (EXP_FALSE, st1)
           else typeError "&&" "boolean" (getType left)
       fun handleComma () = 
-         intExpression rht
+         let val (left, st2) = intExpression lft st1
+         in
+            intExpression rht st1
+         end
    in 
       case opr of
          BOP_PLUS => handlePlus ()
@@ -274,18 +298,18 @@ and intBinary (EXP_BINARY {opr=opr, lft=lft, rht=rht}) =
        | BOP_COMMA => handleComma ()
    end
 
-and intUnary (EXP_UNARY {opr=opr, opnd=opnd}) = 
+and intUnary (EXP_UNARY {opr=opr, opnd=opnd}) st = 
    let
-      val ret = intExpression opnd
+      val (ret, st1) = intExpression opnd st 
       fun handleNot () =
          if unBoolCheck ret 
-         then doNot ret
+         then (doNot ret, st1)
          else (print "unary "; typeError "!" "boolean" (getType opnd)) 
       fun handleTypeof () =
-         doTypeof ret
+         (doTypeof ret, st1)
       fun handleMinus () =
          if unNumCheck ret
-         then doMinus ret
+         then (doMinus ret, st1)
          else (print "unary "; typeError "-" "number" (getType opnd))
    in
       case opr of 
@@ -294,15 +318,15 @@ and intUnary (EXP_UNARY {opr=opr, opnd=opnd}) =
        | UOP_MINUS => handleMinus ()
    end
 
-and intCond (EXP_COND {guard=guard, thenExp=thenExp, elseExp=elseExp}) =
-   let val gd = intExpression guard
+and intCond (EXP_COND {guard=guard, thenExp=thenExp, elseExp=elseExp}) st =
+   let val (gd, st1) = intExpression guard st
    in
       if unBoolCheck gd
       then if getBoolVal gd
          then
-            intExpression thenExp
+            intExpression thenExp st
          else
-            intExpression elseExp
+            intExpression elseExp st
       else error ("boolean guard required for 'cond' expression, found " ^ (getType gd))
    end 
 ;
