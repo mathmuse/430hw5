@@ -151,7 +151,7 @@ fun printExpr exp =
    let 
       val str = case exp of 
          EXP_NUM n => String.map (fn x => case x of #"~" => #"-" | n => n) (Int.toString n)
-       | EXP_STRING n => "\"" ^ n ^ "\""
+       | EXP_STRING n => n
        | EXP_TRUE => "true"
        | EXP_FALSE => "false"
        | EXP_UNDEFINED => "undefined"
@@ -170,7 +170,7 @@ fun interpret fname =
       val ast = parse fname
       val res = intProgram ast
    in
-      (map println res; ())
+      ()
    end
 
 and intProgram (PROGRAM {elems=elems}) = 
@@ -179,8 +179,14 @@ and intProgram (PROGRAM {elems=elems}) =
 and intSourceElement (STMT {stmt=stmt}) = 
    intStatement stmt
 
-and intStatement (ST_EXP {exp=exp}) = 
-   (printExpression exp 0) ^ " ==> " ^ (printExpr (intExpression exp))
+and 
+   intStatement (ST_EXP {exp=exp}) = 
+      (intExpression exp; ())
+ | intStatement (ST_PRINT exp) = 
+      intPrint exp
+
+and 
+   intPrint exp = print (printExpr (intExpression exp))
 
 and 
    intExpression (EXP_BINARY n) = intBinary (EXP_BINARY n)
