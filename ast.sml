@@ -24,6 +24,7 @@ datatype unaryOperator =
 datatype expression =
      EXP_NUM of int
    | EXP_STRING of string
+   | EXP_ID of string
    | EXP_TRUE
    | EXP_FALSE
    | EXP_UNDEFINED
@@ -34,9 +35,13 @@ datatype expression =
 
 datatype statement =
    ST_EXP of {exp: expression}
-;
+ | ST_BLOCK of sourceElement list
+ | ST_IF of {iff: expression, thn: statement}
+ | ST_IFELSE of {iff: expression, thn: statement, el: statement}
+ | ST_PRINT of expression
+ | ST_ITER of {whil: expression, block: statement} 
 
-datatype sourceElement =
+and sourceElement =
    STMT of {stmt: statement}
 ;
 

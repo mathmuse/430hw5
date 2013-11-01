@@ -74,6 +74,17 @@ fun
  | isExpression _ = false
 ;
 
+fun isStatement n = 
+   if isExpression n 
+   then true
+   else case n of 
+      TK_LBRACE => true
+    | TK_IF => true
+    | TK_PRINT => true
+    | TK_WHILE => true
+    | _ => false
+; 
+
 fun
    isBlock TK_LBRACE = true
  | isBlock _ = false
@@ -216,15 +227,62 @@ and parseStatement fstr tk =
       parseSubstatement parsePrintStatement fstr tk
    else if isIteration tk then
       parseSubstatement parseIterationStatement fstr tk
+   else
+      error "bad statement"
 
-and parseBlockStatement fstr tk
+and parseBlockStatement fstr tk = 
+   let val (tk1, ast1) = parseMultipleStatements fstr tk in
+      if tk1 = TK_SEMI
+      then (nextToken fstr, ST_BLOCK ast1)
+      else error "unterminated blockstatement"
+   end
 
-and parseIfStatement fstr tk
+and parseMultipleStatements fstr tk = 
+   if isStatement tk
+   then 
+      let val (tk1, ast1) = parseStatement fstr tk in
+         let val (tk2, ast2li) = parseMultipleStatements fstr tk in
+            (tk2, ast1 :: ast2li)
+         end
+      end
+   else (tk, [])
 
-and parsePrintStatement fstr tk
+and parseIfStatement fstr tk = 
+   let val tk1 = nextToken fstr in
+      if tk1 = TK_LPAREN
+      then let val (tk2, ast2) = parseExpression fstr (nextToken fstr) in 
+         if tk2 = TK_RPAREN
+         then let val (tk3, ast3) = parseBlockStatement fstr (nextToken fstr) in
+            if tk3 = TK_ELSE
+            then 
+               let val (tk4, ast4) = parseBlockStatement fstr (nextToken fstr) in
+                  (tk4, ST_IFELSE {iff=ast2, thn=ast3, el=ast4})
+               end
+            else (tk3, ST_IF {iff=ast2, thn=ast3})
+         end
+         else error "no closing paren in if"
+      end
+      else error "no opening paren in if"
+   end
 
-and parseIterationStatement fstr tk
+and parsePrintStatement fstr tk = 
+   let val (tk1, ast1) = parseExpression fstr (nextToken fstr) in
+      if tk1 = TK_SEMI
+      then (nextToken fstr, ST_PRINT ast1)
+      else error "no semicolon at end of print"
+   end
 
+and parseIterationStatement fstr tk = 
+   if (nextToken fstr) = TK_LPAREN
+   then let val (tk1, ast1) = parseExpression fstr (nextToken fstr) in
+      if tk1 = TK_RPAREN
+      then 
+         let val (tk2, ast2) = parseBlockStatement fstr (nextToken fstr) in
+            (tk2, ST_ITER {whil=ast1, block=ast2 })
+         end
+      else error "expected ) in if"
+   end
+   else error "expected ( in if"
 
 and parseExpressionStatement fstr tk = 
    let val (tk1, ast1) = parseExpression fstr tk
@@ -311,6 +369,7 @@ and parsePrimaryExpression fstr tk =
     | TK_FALSE => (nextToken fstr, EXP_FALSE)
     | TK_STRING n => (nextToken fstr, EXP_STRING n)
     | TK_UNDEFINED => (nextToken fstr, EXP_UNDEFINED)
+    | TK_ID n => (nextToken fstr, EXP_ID n)
     | _ => exp "value" tk
 
 ;
