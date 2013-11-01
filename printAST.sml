@@ -65,19 +65,19 @@ and
       String.concatWith "\n" (map printSourceElement n)
 
 and printSourceElement (STMT {stmt=stmt}) = 
-   (printStatement stmt) ^ ";"
+   printStatement stmt
 
 and 
-   printStatement (ST_EXP {exp=exp}) = printExpression exp
+   printStatement (ST_EXP {exp=exp}) = (printExpression exp) ^ ";"
  | printStatement (ST_BLOCK ls) = printBlock ls
- | printStatement (ST_IF {iff=iff, thn=thn}) = printIf iff thn
+ | printStatement (ST_IF {iff=iff, thn=thn}) = printEmptyIf iff thn
  | printStatement (ST_IFELSE {iff=iff, thn=thn, el}) = printIfElse iff thn el 
- | printStatement (ST_PRINT expr) = printPrint expr
+ | printStatement (ST_PRINT expr) = (printPrint expr) ^ ";"
  | printStatement (ST_ITER {whil=whil, block=block}) = printIter whil block
 
 and 
    printExpression (EXP_NUM n) = Int.toString n
- | printExpression (EXP_STRING n) = "\"" ^ n ^ "\""
+ | printExpression (EXP_STRING n) = "\"" ^ String.toString(n) ^ "\""
  | printExpression EXP_TRUE = "true"
  | printExpression EXP_FALSE = "false"
  | printExpression EXP_UNDEFINED = "undefined"
@@ -90,20 +90,26 @@ and
 and printAssign lft rht = 
    "(" ^ (printExpression lft) ^ " = " ^ (printExpression rht) ^ ")"
 
+and appendln (x,y) = 
+   x ^ "\n" ^ y
+
 and printBlock ls =
-   "{" ^ (foldr (op ^) "" (map printSourceElement ls)) ^ "}"
+   "{\n" ^ (foldr appendln "" (map printSourceElement ls)) ^ "}"
 
 and printIf iff thn = 
-   "if " ^ (printExpression iff) ^ " then " ^ (printStatement thn)
+   "if (" ^ (printExpression iff) ^ ")\n" ^ (printStatement thn)
 
-and printIfElse iff thn el = 
-   (printIf iff thn) ^ " else " ^ (printStatement el)
+and printEmptyIf iff thn = 
+   (printIf iff thn) ^ "\nelse\n{\n}"
+
+and printIfElse iff thn el =
+   (printIf iff thn) ^ "\nelse\n" ^ (printStatement el) ^ "\n"
 
 and printPrint expr = 
    "print " ^ (printExpression expr)
 
 and printIter whil block =
-   "while " ^ (printExpression whil) ^ " " ^ (printStatement block)
+   "while (" ^ (printExpression whil) ^ ")\n" ^ (printStatement block)
 
 and printBinary {opr=opr, lft=lft, rht=rht} =
    let 
