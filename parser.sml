@@ -169,6 +169,10 @@ fun
  | binTkToOp n = error ":(("
 ;
 
+fun
+   isValidId (EXP_ID _) = true
+ | isValidId _ = false
+;
 
 fun parseBinary nextFun tkChk fstr tk =  
    let val (tk1, ast) = nextFun fstr tk in 
@@ -302,10 +306,13 @@ and parseExpression fstr tk =
 and parseAssignmentExpression fstr tk = 
    let val (tk1, ast1) = parseConditionalExpression fstr tk in
       if tk1 = TK_ASSIGN 
-      then 
-         let val (tk2, ast2) = parseAssignmentExpression fstr (nextToken fstr) in
-            (tk2, EXP_ASSIGN {lft=ast1, rht=ast2})
-         end
+      then
+         if isValidId ast1 then 
+            let val (tk2, ast2) = parseAssignmentExpression fstr (nextToken fstr) in
+               (tk2, EXP_ASSIGN {lft=ast1, rht=ast2})
+            end
+         else 
+            error "unexpected token '='"
       else (tk1, ast1) 
    end
 
