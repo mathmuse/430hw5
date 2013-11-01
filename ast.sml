@@ -31,6 +31,7 @@ datatype expression =
    | EXP_BINARY of {opr: binaryOperator, lft: expression, rht: expression}
    | EXP_UNARY of {opr: unaryOperator, opnd: expression}
    | EXP_COND of {guard: expression, thenExp: expression, elseExp: expression}
+   | EXP_ASSIGN of {lft: expression, rht: expression}
 ;
 
 datatype statement =

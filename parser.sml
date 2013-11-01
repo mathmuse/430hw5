@@ -300,7 +300,14 @@ and parseExpression fstr tk =
    parseBinary parseAssignmentExpression isCommaOp fstr tk
 
 and parseAssignmentExpression fstr tk = 
-   parseConditionalExpression fstr tk
+   let val (tk1, ast1) = parseConditionalExpression fstr tk in
+      if tk1 = TK_ASSIGN 
+      then 
+         let val (tk2, ast2) = parseAssignmentExpression fstr (nextToken fstr) in
+            (tk2, EXP_ASSIGN {lft=ast1, rht=ast2})
+         end
+      else (tk1, ast1) 
+   end
 
 and parseConditionalExpression fstr tk = 
    let val (tk1, ast1) = (parseLogicalORExpression fstr tk) in
