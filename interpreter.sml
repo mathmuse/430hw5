@@ -202,7 +202,57 @@ and
       end 
  | intStatement (ST_PRINT exp) st = 
       intPrint exp st
+ | intStatement (ST_BLOCK ls) st = 
+      intBlock ls st
+ | intStatement (ST_IF {iff=iff, thn=thn}) st = 
+      intIf (ST_IF {iff=iff, thn=thn}) st
+ | intStatement (ST_IFELSE {iff=iff, thn=thn, el=el}) st = 
+      intIfElse (ST_IFELSE {iff=iff, thn=thn, el=el}) st
+ | intStatement (ST_ITER {whil=whil, block=block}) st = 
+      intIter whil block st
 
+and
+   intIter whil block st = 
+      let val (gd, st1) = intExpression whil st
+      in
+         if unBoolCheck gd
+         then if getBoolVal gd
+            then
+               let val st2 = intStatement block st1
+               in
+                  intIter whil block st2 
+               end
+            else st1
+         else error ("boolean guard required for 'while' statement, found " ^ (getType gd))
+      end
+
+and intIf (ST_IF {iff=iff, thn=thn}) st = 
+   let val (gd, st1) = intExpression iff st
+   in
+      if unBoolCheck gd
+      then if getBoolVal gd
+         then
+            intStatement thn st1
+         else st1
+      else error ("boolean guard required for 'if' statement, found " ^ (getType gd))
+   end
+
+and intIfElse (ST_IFELSE {iff=iff, thn=thn, el=el}) st = 
+   let val (gd, st1) = intExpression iff st
+   in
+      if unBoolCheck gd
+      then if getBoolVal gd
+         then
+            intStatement thn st1
+         else
+            intStatement el st1
+      else error ("boolean guard required for 'if' statement, found " ^ (getType gd))
+   end
+
+
+and intBlock ls st =
+   intSubProgram ls st
+   
 and 
    intPrint exp st =
       let val (v, newSt) = intExpression exp st
@@ -214,7 +264,23 @@ and
    intExpression (EXP_BINARY n) st = intBinary (EXP_BINARY n) st
  | intExpression (EXP_UNARY n) st = intUnary (EXP_UNARY n) st
  | intExpression (EXP_COND n) st = intCond (EXP_COND n) st
+ | intExpression (EXP_ASSIGN n) st = intAssign (EXP_ASSIGN n) st
+ | intExpression (EXP_ID n) st = intId (EXP_ID n) st
  | intExpression n st = (n, st)
+
+and intId (EXP_ID n) st =
+   case find st n of
+      SOME x => (x, st)
+    | NONE => error ("variable '" ^ n ^ "' not found")
+
+and 
+   intAssign (EXP_ASSIGN {lft= (EXP_ID n), rht=rht}) st = 
+      let val (v1, st1) = intExpression rht st
+      in
+         (insert st (n, v1); (v1, st1))
+      end
+   | intAssign _ _  = 
+      error "BAD ASSIGN!"
 
 and intBinary (EXP_BINARY {opr=opr, lft=lft, rht=rht}) st = 
    let 
